@@ -1,0 +1,23 @@
+globals [ mouse-was-down? mouse-procedure ]
+
+;; finds out if the mouse was clicked
+to-report mouse-clicked? [mouse-is-down?]
+  report (mouse-was-down? = true and not mouse-is-down?)
+end
+
+;; function to call for check for mouse events
+to mouse-manager
+  let mouse-is-down? mouse-down?
+  if mouse-clicked? mouse-is-down? [
+    ; Other procedures that should be run on mouse-click
+    if is-anonymous-command? mouse-procedure [
+      run mouse-procedure
+    ]
+  ]
+  set mouse-was-down? mouse-is-down?
+end
+
+;; set the function to call on mouse-click
+to set-mouse-procedure [procedure]
+  set mouse-procedure procedure
+end

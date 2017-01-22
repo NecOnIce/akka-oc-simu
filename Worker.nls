@@ -1,0 +1,106 @@
+breed [workers worker]
+workers-own [my_mailbox current_task]
+
+;; creates a new worker and reports it
+to-report new-worker
+  let w nobody
+  let mbox new-mailbox
+  create-workers 1 [
+    set w self
+    set my_mailbox mbox
+    hide-turtle
+  ]
+  print "created a new Worker"
+  report w
+end
+
+;; sends the given task to the given worker
+to send-to-worker [w task]
+  ask w [
+     enqueue-task my_mailbox task
+  ]
+end
+
+;; reports the size of the contained mailbox
+to-report queue-size? [w]
+  let s 0
+  ask w [
+    set s messages? my_mailbox
+  ]
+  report s
+end
+
+;; the main worker loop to run one tick for the workers
+to worker-loop 
+  ask workers [
+    
+    ;; check if we have a task which is processed atm
+    if current_task = nobody [
+      if has-task my_mailbox [
+        set current_task dequeue-task my_mailbox
+        ;; print "task geholt"
+      ]
+    ]
+    
+    let t current_task
+    
+    if is-list? t [
+      
+      ;; print "is-list"
+      ifelse empty? t [
+        set t nobody
+        set current_task nobody
+        ;; print "list-task finished"
+      ]
+      [
+        set t item 0 t
+      ]
+    ]
+    
+    ;; check that we have something to process
+    if is-anonymous-reporter? t [
+      
+      ;; print "is reporter"
+      ;; process now
+      let result runresult t
+      
+      if is-list? result [ ;; taskload task
+        set t result
+      ]
+            
+      if is-number? result [ ;; simple task
+        set t result
+      ]
+
+      if is-boolean? result and result = true [ ;; send-task
+        set t nobody
+        ;; print "send-task finished"
+      ]
+    ]
+    
+    if is-number? t [
+      
+      ;; print "is-number"
+      ifelse t > 0 [
+        set t t - 1
+      ]
+      [
+        set t nobody
+        ;; print "simple-task finished"
+      ]
+    ]
+    
+    if is-list? current_task [
+      
+      ;; is t processed or not ?
+      ifelse  t = nobody [
+        set t butfirst current_task
+      ]
+      [
+        set t replace-item 0 current_task t
+      ]
+    ]
+    
+    set current_task t
+  ]
+end

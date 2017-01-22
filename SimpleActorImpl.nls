@@ -1,0 +1,17 @@
+;; simple actor implementation
+
+;; todo i need a method to swap an actor impl in runtime ... -> reusing of the variables and setting of the vars, etc ...
+
+;; creates a new simple-actor
+to-report new-simple-actor [pos-x pos-y name]
+  let a new-actor pos-x pos-y name
+  let w new-worker
+  ask a [
+    set simple_actor_worker w
+    set routing [
+      [message] -> send-to-worker w message 
+    ]
+    set obs_remaining_tasks [ [] -> queue-size? simple_actor_worker]
+  ]
+  report a
+end

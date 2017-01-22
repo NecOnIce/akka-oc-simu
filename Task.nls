@@ -1,0 +1,40 @@
+;; creates a new task which sends the given actor the given task
+to-report new-send-task [to-actor task]
+  report [ [] -> send-task-impl to-actor task]
+end
+
+;; implementation of the above method because of the complexity limitations of anonymous reporters ...
+to-report send-task-impl [to-actor task]
+  send-to-actor to-actor task
+  report true
+end
+
+;; creates a new simple-task which needs steps amount of steps to be finished
+to-report new-simple-task [steps]
+  report [ [] -> steps]
+end
+
+;; creates a new task with the given payload
+to-report new-task [taskload]
+  
+  if is-number? taskload [
+    report new-simple-task taskload
+  ]
+  
+  report [ [] -> taskload ]
+end
+
+;; creates a new Task-Description which can be used to create new tasks on the fly via its constructor
+to-report new-task-description [owning-actor subtasks]
+  
+  let task-description []
+  set task-description lput owning-actor task-description
+  
+  let constructor [ [] -> 
+    new-send-task owning-actor new-task subtasks
+  ]
+  
+  set task-description lput constructor task-description
+  report task-description
+end
+

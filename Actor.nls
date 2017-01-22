@@ -1,0 +1,46 @@
+
+
+breed [actors actor]
+actors-own [
+  my_mailbox routing obs_remaining_tasks ;; common
+  simple_actor_worker ;; simpleActor
+]
+
+;; creates a new actor on the given position and with the given name (label)
+to-report new-actor [pos-x pos-y name]
+  let w nobody
+  let mbox new-mailbox
+  create-actors 1 [
+    set size 2
+    set w self
+    set xcor pos-x
+    set ycor pos-y
+    set shape "pentagon"
+    set color 104
+    set label name
+    set my_mailbox mbox
+    set routing [ [message] -> ] ;; nop impl
+    set obs_remaining_tasks [ [] -> 0] ;; nop impl
+  ]
+  print "created a new Actor"
+  report w
+end
+
+;; sends the given task to the given actor
+to send-to-actor [act task]
+  ask act [
+     enqueue-task my_mailbox task
+  ]
+end
+
+;; the main actor loop to run one tick for the actors
+to actor-loop 
+  ask actors [
+    
+    ;; look for messages inside the mailbox and route them
+    if has-task my_mailbox [
+      let message dequeue-task my_mailbox
+      (run routing message)
+    ]
+  ]
+end

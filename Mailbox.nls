@@ -1,0 +1,48 @@
+breed [mailboxes mailbox]
+mailboxes-own [queue]
+
+;; creates a new mailbox
+to-report new-mailbox
+  let mbox nobody
+  create-mailboxes 1 [
+    set queue []
+    set mbox self
+    hide-turtle
+  ]
+  print "created a new Mailbox"
+  report mbox
+end
+
+;; checks if the mailbox has at least one task
+to-report has-task [mbox]
+  let ret false
+  ask mbox [
+    let l length queue ;; instead using empty? ?
+    if l > 0 [set ret true]
+  ]
+  report ret
+end
+
+;; enqueues a task in the queue of the mailbox
+to enqueue-task [mbox task]
+  ask mbox [set queue lput task queue]
+end
+
+;; dequeues a task from the queue of the mailbox
+to-report dequeue-task [mbox]
+  let task [ [] -> ]
+  ask mbox [
+    set task item 0 queue
+    set queue but-first queue
+  ]
+  report task
+end
+
+;; retrieves the amount of messages from the mailbox
+to-report messages? [mbox]
+  let s 0
+  ask mbox [
+    set s length queue
+  ]
+  report s
+end
