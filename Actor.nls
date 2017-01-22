@@ -4,6 +4,8 @@ breed [actors actor]
 actors-own [
   my_mailbox routing obs_remaining_tasks ;; common
   simple_actor_worker ;; simpleActor
+  worker-list ;; fixedSizeActor
+  resizing ;; the resizing strategy to use
 ]
 
 ;; creates a new actor on the given position and with the given name (label)
@@ -21,6 +23,7 @@ to-report new-actor [pos-x pos-y name]
     set my_mailbox mbox
     set routing [ [message] -> ] ;; nop impl
     set obs_remaining_tasks [ [] -> 0] ;; nop impl
+    set resizing nobody ;; nop impl
   ]
   print "created a new Actor"
   report w
@@ -35,6 +38,9 @@ end
 
 ;; the main actor loop to run one tick for the actors
 to actor-loop 
+  
+  let resizeActors []
+  ;; routing
   ask actors [
     
     ;; look for messages inside the mailbox and route them
@@ -42,5 +48,76 @@ to actor-loop
       let message dequeue-task my_mailbox
       (run routing message)
     ]
+    
+    ;; if we have defined a resizer execute it here
+    if resizing != nobody [
+      
+      set resizeActors lput self resizeActors
+      
+      ;; before resizing we have to clear the worker-list
+      let wList to-turtleset worker-list
+      let clearableWorkers wList with [can-be-cleared?]
+      set wList wList with [not can-be-cleared?]
+      let newWList to-list wList ;; workaround for converting list to agentsets and vise versa ...
+      set worker-list newWList
+      ask clearableWorkers [die]
+      
+      ;; execute-resizer
+    ]
   ]
+  
+  foreach resizeActors [ [ra] ->
+    
+    let wCount 0
+    let wList []
+    ask ra [
+      set wList worker-list
+      ask resizing [
+        ;; set wCount (runresult resize-executor wList)
+      ]
+    ]
+    
+    if wCount > 0 [
+      ;; add workers
+      repeat wCount [
+        let w runresult NewWorkerSpawner
+        set wList lput w wList
+      ]
+    ]
+  
+    if wCount < 0 [
+      ;; remove workers, aka poison pill
+      let notBusyWorkersToRemove n-of wCount wList with [not is-busy? [pressure-threshold] of resizing]
+      ask to-turtleset notBusyWorkersToRemove [poisen]
+    ]
+    
+    ask ra [set worker-list to-list wList]
+  ]
+  
+end
+
+;; executes the given resizer and reports the new list of workers to be used by the calling actor
+to execute-resizer
+  
+  let wCount 0
+  let wList to-turtleset worker-list
+  ask resizing [
+    set wCount (runresult resize-executor wList)
+  ]
+  
+  if wCount > 0 [
+    ;; add workers
+    repeat wCount [
+      let w runresult NewWorkerSpawner
+      set wList lput w wList
+    ]
+  ]
+  
+  if wCount < 0 [
+    ;; remove workers, aka poison pill
+    let notBusyWorkersToRemove n-of wCount wList with [not is-busy? [pressure-threshold] of resizing]
+    ask notBusyWorkersToRemove [poisen]
+  ]
+  
+  set worker-list to-list wList
 end

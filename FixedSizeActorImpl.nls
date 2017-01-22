@@ -1,0 +1,32 @@
+;; fixed sized Actor Impl which uses a fixed number of Workers to perform the work
+
+;; creates a new fixed sized actor 
+to-report new-fixed-sized-actor [pos-x pos-y name]
+  let act new-actor pos-x pos-y name
+  print "new fixed size actor created"
+  report initialize-fixed-actor act
+end
+
+;; initializes a fixed sized actor 
+to-report initialize-fixed-actor [act]
+  
+  let wList n-values InitialWorkerListSize [ [] -> new-worker ]
+  
+  print length wList
+  ask act [
+    set worker-list wList
+    set routing [
+      [message] -> smallest-mailbox-routing worker-list with [not is-poisened?] message ;; is worker-list static or member ?
+    ]
+    set obs_remaining_tasks [ [] -> total-worker-tasks worker-list ]
+  ]
+  
+  report act
+end
+
+;; reports the total amount of tasks of the actor
+to-report total-worker-tasks [wList]
+  
+  let wSizes map [ [w] -> queue-size? w ] wList
+  report reduce + wSizes
+end

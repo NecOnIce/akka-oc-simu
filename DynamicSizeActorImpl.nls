@@ -1,0 +1,28 @@
+;; Dynamic Size Actor Impl
+
+;; creates a new fixed sized actor 
+to-report new-dynamic-sized-actor [pos-x pos-y name]
+  let act new-actor pos-x pos-y name
+  print "new dynamic actor created"
+  set act initialize-dynamic-actor act
+  report act
+end
+
+;; initializes a fixed sized actor 
+to-report initialize-dynamic-actor [act]
+  
+  let wList n-values InitialWorkerListSize [ [] -> new-worker ]
+  let res new-default-resizing 1 10 10 1 0.2 0.3 0.1
+  
+  print length wList
+  ask act [
+    set worker-list wList
+    set routing [
+      [message] -> smallest-mailbox-routing worker-list message 
+    ]
+    set resizing res
+    set obs_remaining_tasks [ [] -> total-worker-tasks worker-list ]
+  ]
+  
+  report act
+end

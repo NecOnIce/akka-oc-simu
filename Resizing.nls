@@ -1,0 +1,96 @@
+;; the resizing implementations 
+
+breed [resizers resizer]
+resizers-own [
+  
+  ;; common
+  messages-since-resize
+  resize-executor
+  
+  ;; variables of the default resizer
+  lower-bound
+  upper-bound
+  messages-per-resize
+  pressure-threshold
+  rampup-rate
+  backoff-threshold
+  backoff-rate
+  
+  ;; variables of the optimal size resizer
+]
+
+;;
+;;
+;; lb (lower-bound) the minimum of workers
+;; ub (upper-bound) the maximum of workers
+;; mpr (messages-per-resize) the amount of messages which has to be processed until a resize happens
+;; pt (pressure-threshold) the indicator which specifies a worker as busy or not
+;; rr (rampup-rate) the percentage of workers from the current set of workers to add while upsizing
+;; bt (backoff-threshold) threshold: maximum percentage of workers which are busy, to trigger a downsize
+;; br (backoff-rate) the percentage of workers from the current set of workers to remove while downsizing
+;;
+to-report new-default-resizing [lb ub mpr pt rr bt br] 
+  
+  let res nobody
+  create-resizers 1 [
+    set lower-bound lb
+    set upper-bound ub
+    set messages-per-resize mpr
+    set pressure-threshold pt
+    set rampup-rate rr
+    set backoff-threshold bt
+    set backoff-rate br
+    set messages-since-resize 0
+    
+    set resize-executor [ [wList] ->  default-resizing wList]
+    set res self
+    hide-turtle 
+  ]
+  
+  print "default resizing created"
+  report res
+end
+
+;; the implementation of the default resizing strategy
+to-report default-resizing [wList]
+  
+  set messages-since-resize messages-since-resize + 1
+  
+  ;; check if we have receipt enough messages for a resize
+  if messages-since-resize < messages-per-resize [report 0]
+  set messages-since-resize 0 ;; reset counter
+  
+  let workerCount count wList
+  if workerCount = upper-bound [report 0] ;; do nothing on cap
+  
+  ;; check for increase
+  let pt pressure-threshold
+  let busyWorkerCount count wList with [is-busy? pt]
+  if workerCount = busyWorkerCount [
+  
+    let newWorkerCount workerCount * ( 1 + rampup-rate )
+    if newWorkerCount > upper-bound [set newWorkerCount upper-bound]
+    
+    let newWorkers round (newWorkerCount - workerCount)
+    report newWorkers
+  ]
+ 
+  ;; check for decrease
+  let backoffWorkers workerCount * backoff-threshold
+  if busyWorkerCount <= backoffWorkers [
+    
+    let newWorkerCount workerCount * ( 1 - backoff-rate )
+    if newWorkerCount < lower-bound [set newWorkerCount lower-bound]
+    
+    let newWorkers round (newWorkerCount - workerCount)
+    let poisenedWorkers count wList with [is-poisened?]
+    
+    ;; take care of poisened workers, they have to be 
+    set newWorkers newWorkers + poisenedWorkers
+    if newWorkers > 0 [set newWorkers 0]
+    
+    report newWorkers
+  ]
+  
+  report 0
+end

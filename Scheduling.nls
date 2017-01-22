@@ -1,0 +1,28 @@
+;; scheduling implementation for the akka system
+
+;; sets up the Scheduling with the given count of threads
+to setup-scheduling [thread-count]
+  set FreeThreadsList n-values thread-count [ [] -> "thread" ]
+end
+
+;; runs the scheduling, 
+to scheduling-loop
+  
+  if not empty? FreeThreadsList [
+    set FreeThreadsList filter [ [thread] -> schedule-thread thread ] FreeThreadsList
+  ]
+end
+
+;; schedules the given thread to one of the workers which have no thread
+;; returns true if the thread was not schedules (it will not be filtered out) and false if the thread was scheduled
+to-report schedule-thread [thread]
+  
+  let w one-of workers with [ need-thread? ]
+  
+  ;; if there is no worker which needs a thread don't filter the thread
+  if w = nobody [report true ]
+  
+  ;; give the thread to the worker and filter the thread out
+  ask w [ set-worker-thread thread ] 
+  report false
+end

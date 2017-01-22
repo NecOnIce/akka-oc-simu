@@ -1,5 +1,5 @@
 breed [workers worker]
-workers-own [my_mailbox current_task]
+workers-own [my_mailbox current_task worker-thread poisened?]
 
 ;; creates a new worker and reports it
 to-report new-worker
@@ -8,6 +8,9 @@ to-report new-worker
   create-workers 1 [
     set w self
     set my_mailbox mbox
+    set worker-thread nobody ;; initially a worker has no thread to work with
+    set current_task nobody ;; initially a worker has no currently executed task
+    set poisened? false
     hide-turtle
   ]
   print "created a new Worker"
@@ -30,9 +33,57 @@ to-report queue-size? [w]
   report s
 end
 
+to poisen
+  set poisened? true
+end
+
+to-report is-poisened? 
+  report poisened?
+end
+
+to-report can-be-cleared?
+  ifelse is-poisened? and current_task = nobody and messages? my_mailbox = 0 [report true] [report false]
+end
+
+;; indicates if this worker is budy or not
+;; the worker is busy if it has at least the given amount of messages currently procesing
+to-report is-busy? [pt]
+  ifelse pt <= messages? my_mailbox [report true] [report false]
+end
+
+;; checks if this worker needs a thread to run its tasks
+;; important: only call this from a worker context
+to-report need-thread?
+  
+  if has-thread? [ report false ]
+  if current_task != nobody [ report true ]
+  if has-task my_mailbox [ report true ]
+  report false
+end
+
+;; checks if this worker has a thread
+;; important: only call this from a worker context
+to-report has-thread? 
+  report worker-thread != nobody
+end
+
+;; sets the given thread as worker-thread for this worker
+;; important: only call this from a worker context
+to set-worker-thread [th]
+  set worker-thread th
+end
+
+;; releases the worker-thread of this worker
+;; important: only call this from a worker context
+to release-worker-thread
+  
+  set FreeThreadsList lput worker-thread FreeThreadsList
+  set-worker-thread nobody
+end
+
 ;; the main worker loop to run one tick for the workers
 to worker-loop 
-  ask workers [
+  ask workers with [has-thread?] [ ;; call the task processing only if the worker has a thread to run the task on ...
     
     ;; check if we have a task which is processed atm
     if current_task = nobody [
@@ -50,6 +101,7 @@ to worker-loop
       ifelse empty? t [
         set t nobody
         set current_task nobody
+        release-worker-thread
         ;; print "list-task finished"
       ]
       [
@@ -74,6 +126,7 @@ to worker-loop
 
       if is-boolean? result and result = true [ ;; send-task
         set t nobody
+        release-worker-thread
         ;; print "send-task finished"
       ]
     ]
@@ -86,6 +139,7 @@ to worker-loop
       ]
       [
         set t nobody
+        release-worker-thread
         ;; print "simple-task finished"
       ]
     ]

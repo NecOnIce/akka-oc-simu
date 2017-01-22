@@ -1,0 +1,24 @@
+;; Routing strategies impl
+
+;; routes the given message to one worker of the given workers which is randomly chosen
+to random-routing [wList message]
+  
+  let w item random length wList wList
+  send-to-worker w message
+end
+
+;; routes the given message to the worker which has the smallest mailbox
+to smallest-mailbox-routing [wList message]
+  
+  let w reduce [ [a b] -> worker-with-smallest-mailbox a b ] wList
+  send-to-worker w message
+end
+
+;; reports the worker with the smallest mailbox
+to-report worker-with-smallest-mailbox [workerA workerB]
+  
+  let mailboxSizeA queue-size? workerA
+  let mailboxSizeB queue-size? workerB
+  
+  ifelse mailboxSizeA <= mailboxSizeB [report workerA] [report workerB]
+end

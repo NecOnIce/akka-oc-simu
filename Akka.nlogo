@@ -1,28 +1,33 @@
-__includes ["MouseManager.nls" "Actor.nls" "Mailbox.nls" "Task.nls" "Worker.nls" "SimpleActorImpl.nls"]
+__includes ["MouseManager.nls" "Actor.nls" "Mailbox.nls" "Task.nls" "Worker.nls" "SimpleActorImpl.nls" "FixedSizeActorImpl.nls" "RoutingStrategies.nls" "Scheduling.nls" "DynamicSizeActorImpl.nls" "Resizing.nls"]
 
-globals [TaskA1Desc TaskB1Desc TaskC1Desc TaskD1Desc TaskE1Desc TaskA2Desc TaskB2Desc TaskC2Desc TaskD2Desc TaskE2Desc]
+globals [
+  TaskA1Desc TaskB1Desc TaskC1Desc TaskD1Desc TaskE1Desc TaskA2Desc TaskB2Desc TaskC2Desc TaskD2Desc TaskE2Desc ;; Task-descriptions
+  InitialWorkerListSize ;; default values
+  FreeThreadsList
+  NewWorkerSpawner
+]
 
 to setup
 
   clear-all
-  let w new-worker
-  let t new-task 5
-  ask workers [
-    send-to-worker self t
-  ]
+  set InitialWorkerListSize 5
+  set NewWorkerSpawner [ [] -> new-worker]
+
   set-mouse-procedure [ [] ->
     let pos-x mouse-xcor
     let pos-y mouse-ycor
     let a new-actor pos-x pos-y "X"
   ]
   setup-actors
+  setup-scheduling ThreadCount
   reset-ticks
 end
 
 to start
 
-  worker-loop
+  scheduling-loop
   actor-loop
+  worker-loop
   task-creation-loop
   mouse-manager
   tick
@@ -31,7 +36,7 @@ end
 to setup-actors
 
   ;; create the actors and for each actor a simple task with task description
-  let a new-simple-actor -10 10 "A"
+  let a new-dynamic-sized-actor -10 10 "A"
 
   let taskList lput new-simple-task 5 []
   set TaskA1Desc new-task-description a taskList
@@ -117,7 +122,7 @@ to start-task [taskCount taskDesc]
   ]
 end
 
-to-report remaining-messages-actor-e
+to-report remaining-messages-actor-e ;; is called every second or so ... optimize ?
   let actorE item 0 TaskE1Desc
   report remaining-messages actorE
 end
@@ -148,6 +153,17 @@ to-report remaining-messages [act]
     set s runresult obs_remaining_tasks
   ]
   report s
+end
+
+to-report to-turtleset [l]
+  report turtle-set l
+end
+
+to-report to-list [agentset]
+
+  let l []
+  ask agentset [set l lput self l]
+  report l
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -220,7 +236,7 @@ TaskA1Count
 TaskA1Count
 0
 25
-0.0
+1.0
 1
 1
 NIL
@@ -415,6 +431,21 @@ remaining-messages-actor-e
 17
 1
 11
+
+SLIDER
+1058
+88
+1230
+121
+ThreadCount
+ThreadCount
+1
+100
+5.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
