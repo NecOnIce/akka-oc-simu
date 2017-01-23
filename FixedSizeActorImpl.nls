@@ -18,15 +18,8 @@ to-report initialize-fixed-actor [act]
     set routing [
       [message] -> smallest-mailbox-routing worker-list with [not is-poisened?] message ;; is worker-list static or member ?
     ]
-    set obs_remaining_tasks [ [] -> total-worker-tasks worker-list ]
+    set actual_worker_count length wList
   ]
   
   report act
-end
-
-;; reports the total amount of tasks of the actor
-to-report total-worker-tasks [wList]
-  
-  let wSizes map [ [w] -> queue-size? w ] wList
-  report reduce + wSizes
 end

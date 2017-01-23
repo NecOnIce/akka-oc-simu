@@ -150,7 +150,7 @@ end
 to-report remaining-messages [act]
   let s 0
   ask act [
-    set s remaining_tasks
+    set s
   ]
   report s
 end

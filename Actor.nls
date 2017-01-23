@@ -2,10 +2,14 @@
 
 breed [actors actor]
 actors-own [
-  my_mailbox routing obs_remaining_tasks ;; common
-  simple_actor_worker ;; simpleActor
-  worker-list ;; fixedSizeActor
+  my_mailbox ;; the mailbox to use for the actor / routing 
+  worker-list ;; the list of workers
+  routing ;; the routing to use
   resizing ;; the resizing strategy to use
+  
+  ;; interface 
+  remaining_tasks ;; the total amount of tasks the actor has currently
+  actual_worker_count
 ]
 
 ;; creates a new actor on the given position and with the given name (label)
@@ -22,7 +26,8 @@ to-report new-actor [pos-x pos-y name]
     set label name
     set my_mailbox mbox
     set routing [ [message] -> ] ;; nop impl
-    set obs_remaining_tasks [ [] -> 0] ;; nop impl
+    set remaining_tasks 0
+    set actual_worker_count 0
     set resizing nobody ;; nop impl
   ]
   print "created a new Actor"
@@ -36,10 +41,24 @@ to send-to-actor [act task]
   ]
 end
 
+;; reports the total amount of tasks of the actor
+to-report total-worker-tasks [wList]
+  
+  let wSizes map [ [w] -> queue-size? w ] wList
+  report reduce + wSizes
+end
+
 ;; the main actor loop to run one tick for the actors
 to actor-loop 
   
-  let resizeActors []
+  ;; count remaining messages
+  ask actors [
+    let workerTasks total-worker-tasks worker-list
+    let routerTasks messages? my_mailbox
+    set remaining_tasks workerTasks + routerTasks
+  ]
+  
+  let resizeActorsList []
   ;; routing
   ask actors [
     
@@ -52,72 +71,49 @@ to actor-loop
     ;; if we have defined a resizer execute it here
     if resizing != nobody [
       
-      set resizeActors lput self resizeActors
+      set resizeActorsList lput self resizeActorsList
       
       ;; before resizing we have to clear the worker-list
-      let wList to-turtleset worker-list
-      let clearableWorkers wList with [can-be-cleared?]
-      set wList wList with [not can-be-cleared?]
-      let newWList to-list wList ;; workaround for converting list to agentsets and vise versa ...
+      let wAgentSet to-turtleset worker-list
+      let clearableWorkers wAgentSet with [can-be-cleared?]
+      set wAgentSet wAgentSet with [not can-be-cleared?]
+      let newWList to-list wAgentSet ;; workaround for converting list to agentsets and vise versa ...
       set worker-list newWList
       ask clearableWorkers [die]
-      
-      ;; execute-resizer
     ]
   ]
   
-  foreach resizeActors [ [ra] ->
+  foreach resizeActorsList [ [ra] ->
     
     let wCount 0
     let wList []
     ask ra [
       set wList worker-list
       ask resizing [
-        ;; set wCount (runresult resize-executor wList)
+        set wCount (runresult resize-executor wList)
       ]
     ]
+    
+    ;; print word "wCount: " wCount
     
     if wCount > 0 [
       ;; add workers
       repeat wCount [
-        let w runresult NewWorkerSpawner
+        let w new-worker
         set wList lput w wList
       ]
     ]
   
     if wCount < 0 [
       ;; remove workers, aka poison pill
-      let notBusyWorkersToRemove n-of wCount wList with [not is-busy? [pressure-threshold] of resizing]
-      ask to-turtleset notBusyWorkersToRemove [poisen]
+      set wCount abs wCount ;; we need positive values here
+      ask ra [ ask resizing [ (run resize-remover wList wCount) ] ]
     ]
     
-    ask ra [set worker-list to-list wList]
-  ]
-  
-end
-
-;; executes the given resizer and reports the new list of workers to be used by the calling actor
-to execute-resizer
-  
-  let wCount 0
-  let wList to-turtleset worker-list
-  ask resizing [
-    set wCount (runresult resize-executor wList)
-  ]
-  
-  if wCount > 0 [
-    ;; add workers
-    repeat wCount [
-      let w runresult NewWorkerSpawner
-      set wList lput w wList
+    ask ra [
+      set worker-list wList
+      set actual_worker_count length wList
     ]
   ]
   
-  if wCount < 0 [
-    ;; remove workers, aka poison pill
-    let notBusyWorkersToRemove n-of wCount wList with [not is-busy? [pressure-threshold] of resizing]
-    ask notBusyWorkersToRemove [poisen]
-  ]
-  
-  set worker-list to-list wList
 end

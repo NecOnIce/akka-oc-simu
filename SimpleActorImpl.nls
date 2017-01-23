@@ -7,11 +7,11 @@ to-report new-simple-actor [pos-x pos-y name]
   let a new-actor pos-x pos-y name
   let w new-worker
   ask a [
-    set simple_actor_worker w
+    set worker-list lput w []
     set routing [
       [message] -> send-to-worker w message 
     ]
-    set obs_remaining_tasks [ [] -> queue-size? simple_actor_worker]
+    set actual_worker_count 0
   ]
   report a
 end

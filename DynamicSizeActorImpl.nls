@@ -21,7 +21,7 @@ to-report initialize-dynamic-actor [act]
       [message] -> smallest-mailbox-routing worker-list message 
     ]
     set resizing res
-    set obs_remaining_tasks [ [] -> total-worker-tasks worker-list ]
+    set actual_worker_count length wList
   ]
   
   report act
