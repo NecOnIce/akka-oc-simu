@@ -13,13 +13,16 @@ to-report initialize-fixed-actor [act]
   let wList n-values InitialWorkerListSize [ [] -> new-worker ]
   
   print length wList
+  let a nobody
   ask act [
     set worker-list wList
     set routing [
-      [message] -> smallest-mailbox-routing worker-list with [not is-poisened?] message ;; is worker-list static or member ?
+      [message] -> smallest-mailbox-routing worker-list message
     ]
     set actual_worker_count length wList
+    set a self
   ]
+  new-observer a
   
   report act
 end

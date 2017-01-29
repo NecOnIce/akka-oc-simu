@@ -11,7 +11,7 @@ to-report new-simple-actor [pos-x pos-y name]
     set routing [
       [message] -> send-to-worker w message 
     ]
-    set actual_worker_count 0
+    set actual_worker_count 1
   ]
   report a
 end

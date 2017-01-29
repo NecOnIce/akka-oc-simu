@@ -9,7 +9,9 @@ actors-own [
   
   ;; interface 
   remaining_tasks ;; the total amount of tasks the actor has currently
-  actual_worker_count
+  actual_worker_count ;; amount of currently active workers of this actor
+  new_tasks ;; the amount of new tasks
+  finished_tasks ;; the amount of tasks which where finished by this actor
 ]
 
 ;; creates a new actor on the given position and with the given name (label)
@@ -29,6 +31,7 @@ to-report new-actor [pos-x pos-y name]
     set remaining_tasks 0
     set actual_worker_count 0
     set resizing nobody ;; nop impl
+    set new_tasks 0
   ]
   print "created a new Actor"
   report w
@@ -38,6 +41,7 @@ end
 to send-to-actor [act task]
   ask act [
      enqueue-task my_mailbox task
+     set new_tasks new_tasks + 1
   ]
 end
 
@@ -68,18 +72,20 @@ to actor-loop
       (run routing message)
     ]
     
+    ;; before resizing we have to clear the worker-list
+    let wAgentSet to-turtleset worker-list
+    let notPoisenedWorkers wAgentSet with [not is-poisened?]
+    let clearableWorkers wAgentSet with [can-be-cleared?]
+    set wAgentSet wAgentSet with [not can-be-cleared?]
+    let newWList to-list wAgentSet ;; workaround for converting list to agentsets and vise versa ...
+    set worker-list newWList
+    ask clearableWorkers [die]
+    
+    set actual_worker_count count notPoisenedWorkers
+    
     ;; if we have defined a resizer execute it here
     if resizing != nobody [
-      
       set resizeActorsList lput self resizeActorsList
-      
-      ;; before resizing we have to clear the worker-list
-      let wAgentSet to-turtleset worker-list
-      let clearableWorkers wAgentSet with [can-be-cleared?]
-      set wAgentSet wAgentSet with [not can-be-cleared?]
-      let newWList to-list wAgentSet ;; workaround for converting list to agentsets and vise versa ...
-      set worker-list newWList
-      ask clearableWorkers [die]
     ]
   ]
   

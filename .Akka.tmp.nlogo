@@ -1,17 +1,18 @@
-__includes ["MouseManager.nls" "Actor.nls" "Mailbox.nls" "Task.nls" "Worker.nls" "SimpleActorImpl.nls" "FixedSizeActorImpl.nls" "RoutingStrategies.nls" "Scheduling.nls" "DynamicSizeActorImpl.nls" "Resizing.nls"]
+__includes ["MouseManager.nls" "Actor.nls" "Mailbox.nls" "Task.nls" "Worker.nls" "SimpleActorImpl.nls" "FixedSizeActorImpl.nls"
+  "RoutingStrategies.nls" "Scheduling.nls" "DynamicSizeActorImpl.nls" "Resizing.nls" "Observer.nls" "Controller.nls"]
 
 globals [
   TaskA1Desc TaskB1Desc TaskC1Desc TaskD1Desc TaskE1Desc TaskA2Desc TaskB2Desc TaskC2Desc TaskD2Desc TaskE2Desc ;; Task-descriptions
   InitialWorkerListSize ;; default values
   FreeThreadsList
-  NewWorkerSpawner
+  CurrentObserverControllerTick
 ]
 
 to setup
 
   clear-all
   set InitialWorkerListSize 5
-  set NewWorkerSpawner [ [] -> new-worker]
+  CurrentObserverControllerTick 0
 
   set-mouse-procedure [ [] ->
     let pos-x mouse-xcor
@@ -29,6 +30,12 @@ to start
   actor-loop
   worker-loop
   task-creation-loop
+  if ObserverControllerTrigger < CurrentObserverControllerTick [
+    oberserver-loop
+    controller-loop
+
+  ]
+
   mouse-manager
   tick
 end
@@ -41,7 +48,7 @@ to setup-actors
   let taskList lput new-simple-task 5 []
   set TaskA1Desc new-task-description a taskList
 
-  let b new-simple-actor 10 10 "B"
+  let b new-fixed-sized-actor 10 10 "B"
   set taskList lput new-simple-task 10 []
   set TaskB1Desc new-task-description b taskList
 
@@ -94,32 +101,61 @@ end
 
 to task-creation-loop
 
-  start-task TaskA1Count TaskA1Desc
-  start-task TaskB1Count TaskB1Desc
-  start-task TaskC1Count TaskC1Desc
-  start-task TaskD1Count TaskD1Desc
-  start-task TaskE1Count TaskE1Desc
+  start-task TaskA1Percent TaskA1Desc
+  start-task TaskB1Percent TaskB1Desc
+  start-task TaskC1Percent TaskC1Desc
+  start-task TaskD1Percent TaskD1Desc
+  start-task TaskE1Percent TaskE1Desc
 
-  start-task TaskA2Count TaskA2Desc
-  start-task TaskB2Count TaskB2Desc
-  start-task TaskC2Count TaskC2Desc
-  start-task TaskD2Count TaskD2Desc
-  start-task TaskE2Count TaskE2Desc
+  start-task TaskA2Percent TaskA2Desc
+  start-task TaskB2Percent TaskB2Desc
+  start-task TaskC2Percent TaskC2Desc
+  start-task TaskD2Percent TaskD2Desc
+  start-task TaskE2Percent TaskE2Desc
 end
 
-to start-task [taskCount taskDesc]
+to start-task [taskPercent taskDesc]
 
-  loop [
+  let rand random 100
 
-    if taskCount = 0 [
-      stop
-    ]
-
+  if rand < taskPercent [
     let constr item 1 taskDesc
     let t runresult constr
     let res runresult t
-    set taskCount taskCount - 1
   ]
+end
+
+to-report actual-worker-count-actor-e
+  let actorE item 0 TaskE1Desc
+  report actual-worker-count actorE
+end
+
+to-report actual-worker-count-actor-d
+  let actorD item 0 TaskD1Desc
+  report actual-worker-count actorD
+end
+
+to-report actual-worker-count-actor-c
+  let actorC item 0 TaskC1Desc
+  report actual-worker-count actorC
+end
+
+to-report actual-worker-count-actor-b
+  let actorB item 0 TaskB1Desc
+  report actual-worker-count actorB
+end
+
+to-report actual-worker-count-actor-a
+  let actorA item 0 TaskA1Desc
+  report actual-worker-count actorA
+end
+
+to-report actual-worker-count [act]
+  let s 0
+  ask act [
+    set s actual_worker_count
+  ]
+  report s
 end
 
 to-report remaining-messages-actor-e ;; is called every second or so ... optimize ?
@@ -150,7 +186,7 @@ end
 to-report remaining-messages [act]
   let s 0
   ask act [
-    set s
+    set s remaining_tasks
   ]
   report s
 end
@@ -167,10 +203,10 @@ to-report to-list [agentset]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-560
-92
-997
-530
+452
+18
+889
+456
 -1
 -1
 13.0
@@ -194,10 +230,10 @@ ticks
 30.0
 
 BUTTON
-399
-48
-462
-81
+29
+30
+92
+63
 start
 start
 T
@@ -211,10 +247,10 @@ NIL
 1
 
 BUTTON
-483
-48
-546
-81
+113
+30
+176
+63
 setup
 setup
 NIL
@@ -228,119 +264,119 @@ NIL
 1
 
 SLIDER
-54
-96
-226
-129
-TaskA1Count
-TaskA1Count
+902
+19
+1074
+52
+TaskA1Percent
+TaskA1Percent
 0
-25
-0.0
+100
+1.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-54
-141
-226
-174
-TaskB1Count
-TaskB1Count
+903
+99
+1075
+132
+TaskB1Percent
+TaskB1Percent
 0
-25
-0.0
+100
+33.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-56
-190
-228
-223
-TaskC1Count
-TaskC1Count
+904
+171
+1076
+204
+TaskC1Percent
+TaskC1Percent
 0
-25
-0.0
+100
+1.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-57
-238
-229
-271
-TaskD1Count
-TaskD1Count
-0
-25
-0.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-58
-283
-230
-316
-TaskE1Count
-TaskE1Count
-0
-25
-0.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-238
-97
-410
-130
-TaskA2Count
-TaskA2Count
-0
-25
-0.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-239
-146
-411
-179
-TaskB2Count
-TaskB2Count
-0
-25
-0.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
+904
 240
-190
-412
-223
-TaskC2Count
-TaskC2Count
+1076
+273
+TaskD1Percent
+TaskD1Percent
 0
-25
+100
+1.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+903
+305
+1075
+338
+TaskE1Percent
+TaskE1Percent
+0
+100
+1.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+1080
+19
+1252
+52
+TaskA2Percent
+TaskA2Percent
+0
+100
+1.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+1081
+99
+1253
+132
+TaskB2Percent
+TaskB2Percent
+0
+100
+1.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+1082
+172
+1254
+205
+TaskC2Percent
+TaskC2Percent
+0
+100
 0.0
 1
 1
@@ -348,14 +384,14 @@ NIL
 HORIZONTAL
 
 SLIDER
-241
-241
-413
-274
-TaskD2Count
-TaskD2Count
+1083
+240
+1255
+273
+TaskD2Percent
+TaskD2Percent
 0
-25
+100
 0.0
 1
 1
@@ -363,14 +399,14 @@ NIL
 HORIZONTAL
 
 SLIDER
-241
-283
-413
-316
-TaskE2Count
-TaskE2Count
+1082
+305
+1254
+338
+TaskE2Percent
+TaskE2Percent
 0
-25
+100
 0.0
 1
 1
@@ -378,10 +414,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-57
-345
-173
-390
+1262
+15
+1378
+60
 Remaining Tasks A
 remaining-messages-actor-a
 17
@@ -389,10 +425,10 @@ remaining-messages-actor-a
 11
 
 MONITOR
-182
-347
-296
-392
+1263
+94
+1377
+139
 Remeining Tasks B
 remaining-messages-actor-b
 17
@@ -400,10 +436,10 @@ remaining-messages-actor-b
 11
 
 MONITOR
-305
-351
-421
-396
+1263
+166
+1379
+211
 Remaining Tasks C
 remaining-messages-actor-c
 17
@@ -411,10 +447,10 @@ remaining-messages-actor-c
 11
 
 MONITOR
-58
-402
-174
-447
+1263
+235
+1379
+280
 Remaining Tasks D
 remaining-messages-actor-d
 17
@@ -422,10 +458,10 @@ remaining-messages-actor-d
 11
 
 MONITOR
-183
-406
-297
-451
+1264
+300
+1378
+345
 Remaining Tasks E
 remaining-messages-actor-e
 17
@@ -433,15 +469,85 @@ remaining-messages-actor-e
 11
 
 SLIDER
-1058
-88
-1230
-121
+199
+30
+371
+63
 ThreadCount
 ThreadCount
 1
 100
 5.0
+1
+1
+NIL
+HORIZONTAL
+
+MONITOR
+1385
+15
+1450
+60
+Worker A
+actual-worker-count-actor-a
+17
+1
+11
+
+MONITOR
+1384
+94
+1448
+139
+Worker B
+actual-worker-count-actor-b
+17
+1
+11
+
+MONITOR
+1385
+166
+1450
+211
+Worker C
+actual-worker-count-actor-c
+17
+1
+11
+
+MONITOR
+1386
+235
+1451
+280
+Worker D
+actual-worker-count-actor-d
+17
+1
+11
+
+MONITOR
+1385
+300
+1449
+345
+Worker E
+actual-worker-count-actor-e
+17
+1
+11
+
+SLIDER
+199
+84
+401
+117
+ObserverControllerTrigger
+ObserverControllerTrigger
+1
+2500
+100.0
 1
 1
 NIL

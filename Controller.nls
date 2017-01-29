@@ -1,0 +1,124 @@
+breed [controllers controller]
+controllers-own [
+  history
+  controlled_actor
+  rule_base
+  actual_situation
+]
+
+to-report new-controller [controlledActor]
+  
+  let c nobody
+  create-controllers 1 [
+    set controlled_actor controlledActor
+    set history []
+    set c self
+    hide-turtle
+    set actual_situation []
+    
+    let cond1 (list 0.1 1.0 0.0 1.0)
+    let cond2 (list 0.0 1.0 -0.1 0.1)
+    let cond3 (list 0.0 0.9 -1.0 0.0)
+    let cond4 (list 0.0 0.0 0.0 1.0)
+    
+    let rule1 (list cond1 1 1.0)
+    let rule2 (list cond2 0 0.5)
+    let rule3 (list cond3 -1 1.0)
+    let rule4 (list cond4 0 1.0)
+    
+    set rule_base (list rule1 rule2 rule3 rule4)
+  ]
+  report c
+end
+
+to controller-loop 
+  
+  let ctrls to-list controllers
+  foreach ctrls [ [c] ->
+    
+    let rule []
+    let ctrlActor nobody
+    ask c [
+      
+      if not empty? actual_situation [
+        set rule evaluate-rule actual_situation
+        set ctrlActor controlled_actor
+        update-controller-history actual_situation
+      ]
+      set actual_situation []
+    ]
+    
+    ;; we need observer scope here
+    execute-rule rule ctrlActor
+  ]
+end
+
+to set-situation [situation]
+  set actual_situation situation
+end
+
+to-report evaluate-rule [situation]
+  
+  let wdc item 0 situation
+  let td item 1 situation
+  
+  ;; print word "situation " situation
+  
+  let rule []
+  foreach rule_base [ [r] ->
+    
+    let cond item 0 r
+    let wdcL item 0 cond
+    let wdcU item 1 cond
+    let tdL item 2 cond
+    let tdU item 3 cond
+    
+    if wdcL <= wdc and wdc < wdcU [
+      
+      if tdL <= td and td < tdU [
+        set rule lput r rule
+      ]
+    ]
+  ]
+  
+  if not empty? rule [
+    set rule reduce [ [a b] -> 
+      ifelse-value (item 2 a >= item 2 b) [a] [b]
+    ] rule
+  ]
+  
+  report rule
+end
+
+to update-controller-history [situation]
+
+  set history lput situation history ;; maybe we should limit the history to 10 ...
+  
+  if length history > 10 [
+    set history butfirst history
+  ]
+end
+
+to execute-rule [rule ctrlActor]
+  
+  if not empty? rule [
+    
+    let action item 1 rule
+    
+    ;; print word "rule " action
+    
+    ;; if action = 0 [] nothing todo
+    if action = 1 [
+      let w new-worker
+      ask ctrlActor [
+        set worker-list lput w worker-list
+      ]
+    ]
+    if action = -1 [
+      ask ctrlActor [
+        let worker-to-poison one-of worker-list
+        ask worker-to-poison [poisen]
+      ]
+    ]
+  ]
+end

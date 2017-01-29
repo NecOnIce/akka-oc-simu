@@ -1,0 +1,72 @@
+breed [observers observer]
+observers-own [
+  history
+  observed_actor
+  ctrl
+  upper_limit
+]
+
+to new-observer [observedActor]
+  
+  let c new-controller observedActor
+  create-observers 1 [
+    set observed_actor observedActor
+    set history []
+    set ctrl c
+    set upper_limit 10 ;; later set by other ctrl
+    hide-turtle
+  ]
+end
+
+to oberserver-loop
+  
+  ask observers [
+    
+    let remainingTasks 0
+    let newTasks 0
+    let actualWorkerCount 0
+    
+    ask observed_actor [
+      set remainingTasks remaining_tasks
+      set newTasks new_tasks
+      set actualWorkerCount actual_worker_count
+    ]
+    
+    if length history > 0 [
+      let situation pre-process remainingTasks newTasks actualWorkerCount
+      
+      ;; give situation to controller
+      ask ctrl [
+        set-situation situation
+      ]
+    ]
+    update-history remainingTasks newTasks actualWorkerCount
+  ]
+end
+
+to-report pre-process [remainingTasks newTasks actualWorkerCount]
+  
+  let lastDataSet item 0 history
+  let lastRemainingTasks item 0 lastDataSet
+  let finishedTasks lastRemainingTasks - remainingTasks + newTasks
+  
+  let allTasks newTasks + finishedTasks
+  if allTasks = 0 [set allTasks 1]
+  let taskDiff (newTasks - finishedTasks) / allTasks
+  let workerCountDiff (upper_limit - actualWorkerCount) / upper_limit
+  
+  let situation (list workerCountDiff taskDiff)
+  report situation
+end
+
+to update-history [remainingTasks newTasks actualWorkerCount]
+  
+  let l (list remainingTasks newTasks actualWorkerCount)
+  set history lput l history ;; maybe we should limit the history to 10 ...
+  
+  if length history > 10 [
+    set history butfirst history
+  ]
+  
+  ;; calculate unordnung in den newTasks -> viel schwankungen -> selbstRegulation der aktoren -> resizing
+end

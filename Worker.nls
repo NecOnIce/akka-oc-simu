@@ -13,7 +13,7 @@ to-report new-worker
     set poisened? false
     hide-turtle
   ]
-  print "created a new Worker"
+  ;; print "created a new Worker"
   report w
 end
 

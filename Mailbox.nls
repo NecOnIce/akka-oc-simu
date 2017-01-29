@@ -9,7 +9,7 @@ to-report new-mailbox
     set mbox self
     hide-turtle
   ]
-  print "created a new Mailbox"
+  ;; print "created a new Mailbox"
   report mbox
 end
 

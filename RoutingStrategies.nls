@@ -3,6 +3,7 @@
 ;; routes the given message to one worker of the given workers which is randomly chosen
 to random-routing [wList message]
   
+  set wList clear-poisened-workers wList
   let w item random length wList wList
   send-to-worker w message
 end
@@ -10,8 +11,11 @@ end
 ;; routes the given message to the worker which has the smallest mailbox
 to smallest-mailbox-routing [wList message]
   
-  let w reduce [ [a b] -> worker-with-smallest-mailbox a b ] wList
-  send-to-worker w message
+  set wList clear-poisened-workers wList
+  if not empty? wList [
+    let w reduce [ [a b] -> worker-with-smallest-mailbox a b ] wList
+    send-to-worker w message
+  ]
 end
 
 ;; reports the worker with the smallest mailbox
@@ -21,4 +25,11 @@ to-report worker-with-smallest-mailbox [workerA workerB]
   let mailboxSizeB queue-size? workerB
   
   ifelse mailboxSizeA <= mailboxSizeB [report workerA] [report workerB]
+end
+
+;; filteres out the poisened workers from the given list of workers
+to-report clear-poisened-workers [wList]
+  let workerTurtles to-turtleset wList
+  set workerTurtles workerTurtles with [not is-poisened?] ;; clear poisened ones
+  report to-list workerTurtles
 end
