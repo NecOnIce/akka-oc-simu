@@ -29,6 +29,7 @@ to oberserver-loop
     ask observed_actor [
       set remainingTasks remaining_tasks
       set newTasks new_tasks
+      set new_tasks 0 ;; we have to clear the new tasks
       set actualWorkerCount actual_worker_count
     ]
     
@@ -46,10 +47,11 @@ end
 
 to-report pre-process [remainingTasks newTasks actualWorkerCount]
   
-  let lastDataSet item 0 history
+  let lastDataSet last history
   let lastRemainingTasks item 0 lastDataSet
   let finishedTasks lastRemainingTasks - remainingTasks + newTasks
   
+  ;; print word "finishedTasks: " finishedTasks
   let allTasks newTasks + finishedTasks
   if allTasks = 0 [set allTasks 1]
   let taskDiff (newTasks - finishedTasks) / allTasks

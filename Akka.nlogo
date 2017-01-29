@@ -46,24 +46,24 @@ end
 to setup-actors
 
   ;; create the actors and for each actor a simple task with task description
-  let a new-dynamic-sized-actor -10 10 "A"
+  let a new-fixed-sized-actor -10 10 "A"
 
   let taskList lput new-simple-task 5 []
   set TaskA1Desc new-task-description a taskList
 
-  let b new-fixed-sized-actor 10 10 "B"
+  let b new-dynamic-sized-actor 10 10 "B"
   set taskList lput new-simple-task 10 []
   set TaskB1Desc new-task-description b taskList
 
-  let c new-simple-actor 0 0 "C"
+  let c new-fixed-sized-actor 0 0 "C"
   set taskList lput new-simple-task 25 []
   set TaskC1Desc new-task-description c taskList
 
-  let d new-simple-actor -10 -10 "D"
+  let d new-dynamic-sized-actor -10 -10 "D"
   set taskList lput new-simple-task 10 []
   set TaskD1Desc new-task-description d taskList
 
-  let actE new-simple-actor 10 -10 "E"
+  let actE new-fixed-sized-actor 10 -10 "E"
   set taskList lput new-simple-task 5 []
   set TaskE1Desc new-task-description actE taskList
 
@@ -275,7 +275,7 @@ TaskA1Percent
 TaskA1Percent
 0
 100
-1.0
+8.0
 1
 1
 NIL
@@ -290,7 +290,7 @@ TaskB1Percent
 TaskB1Percent
 0
 100
-22.0
+5.0
 1
 1
 NIL
@@ -305,7 +305,7 @@ TaskC1Percent
 TaskC1Percent
 0
 100
-1.0
+2.0
 1
 1
 NIL
@@ -320,7 +320,7 @@ TaskD1Percent
 TaskD1Percent
 0
 100
-1.0
+5.0
 1
 1
 NIL
@@ -335,7 +335,7 @@ TaskE1Percent
 TaskE1Percent
 0
 100
-1.0
+6.0
 1
 1
 NIL

@@ -12,7 +12,6 @@ to-report initialize-fixed-actor [act]
   
   let wList n-values InitialWorkerListSize [ [] -> new-worker ]
   
-  print length wList
   let a nobody
   ask act [
     set worker-list wList
