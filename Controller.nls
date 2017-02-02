@@ -5,9 +5,11 @@ controllers-own [
   rule_base
   actual_situation
   learning_rate
+  upper_limit
+  last_remaining_tasks
 ]
 
-to-report new-controller [controlledActor]
+to-report new-dynamic-controller [controlledActor]
   
   let c nobody
   create-controllers 1 [
@@ -17,18 +19,38 @@ to-report new-controller [controlledActor]
     hide-turtle
     set learning_rate 0.1
     set actual_situation []
+    set last_remaining_tasks 0
     
-    let cond1 (list 0.1 1.0 0.0 1.0)
-    let cond2 (list 0.0 1.0 -0.1 0.1)
+    set rule_base []
+  ]
+  report c
+end
+
+to-report new-fixed-controller [controlledActor]
+  
+  let c nobody
+  create-controllers 1 [
+    set controlled_actor controlledActor
+    set history []
+    set c self
+    hide-turtle
+    set learning_rate 0.1
+    set actual_situation []
+    set last_remaining_tasks 0
+    
+    let cond1 (list 0.1 1.0 0.1 1.0)
+    let cond2 (list 0.0 1.0 -0.3 0.0)
     let cond3 (list 0.0 0.9 -1.0 0.0)
     let cond4 (list 0.0 0.0 0.0 1.0)
+    let cond5 (list -1.0 0.0 -1.0 1.0)
     
-    let rule1 (list cond1 1 1.0 0)
-    let rule2 (list cond2 0 0.5 1)
-    let rule3 (list cond3 -1 1.0 2)
+    let rule1 (list cond1 1 0.5 0)
+    let rule2 (list cond2 0 1.0 1)
+    let rule3 (list cond3 -1 0.5 2)
     let rule4 (list cond4 0 1.0 3)
+    let rule5 (list cond5 -1 1.0 4)
     
-    set rule_base (list rule1 rule2 rule3 rule4)
+    set rule_base (list rule1 rule2 rule3 rule4 rule5)
   ]
   report c
 end
@@ -63,6 +85,7 @@ to update-rule-base
   
   if not empty? lastRule [
     let actTaskDiff item 1 actual_situation
+    set actTaskDiff actTaskDiff * -1
     set actTaskDiff actTaskDiff + 1
     set actTaskDiff actTaskDiff / 2
   
@@ -87,7 +110,7 @@ to-report evaluate-rule [situation]
   let wdc item 0 situation
   let td item 1 situation
   
-  ;; print word "situation " situation
+  ;; print word "taskDiff: " td
   
   let rule []
   foreach rule_base [ [r] ->
@@ -141,8 +164,12 @@ to execute-rule [rule ctrlActor]
     ]
     if action = -1 [
       ask ctrlActor [
-        let worker-to-poison one-of worker-list
-        ask worker-to-poison [poisen]
+        let wSet to-turtleset worker-list
+        let notPoisenedWorkers count wSet with [not poisened?]
+        if notPoisenedWorkers > 1 [
+          let worker-to-poison one-of worker-list
+          ask worker-to-poison [poisen]
+        ]
       ]
     ]
   ]

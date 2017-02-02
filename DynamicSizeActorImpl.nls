@@ -15,6 +15,7 @@ to-report initialize-dynamic-actor [act]
   let res new-default-resizing 1 10 10 1 0.2 0.3 0.1
   
   print length wList
+  let a nobody
   ask act [
     set worker-list wList
     set routing [
@@ -22,6 +23,8 @@ to-report initialize-dynamic-actor [act]
     ]
     set resizing res
     set actual_worker_count length wList
+    set upper_limit 10
+    set a self
   ]
   
   report act

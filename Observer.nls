@@ -3,19 +3,21 @@ observers-own [
   history
   observed_actor
   ctrl
-  upper_limit
+  actual_situation
 ]
 
-to new-observer [observedActor]
+to-report new-observer [observedActor controllerOfActor]
   
-  let c new-controller observedActor
+  let o nobody
   create-observers 1 [
     set observed_actor observedActor
     set history []
-    set ctrl c
-    set upper_limit 10 ;; later set by other ctrl
+    set ctrl controllerOfActor
     hide-turtle
+    set o self
+    set actual_situation []
   ]
+  report o
 end
 
 to oberserver-loop
@@ -25,37 +27,53 @@ to oberserver-loop
     let remainingTasks 0
     let newTasks 0
     let actualWorkerCount 0
+    let upperLimit 0
     
     ask observed_actor [
       set remainingTasks remaining_tasks
       set newTasks new_tasks
       set new_tasks 0 ;; we have to clear the new tasks
       set actualWorkerCount actual_worker_count
+      set upperLimit upper_limit 
     ]
     
     if length history > 0 [
-      let situation pre-process remainingTasks newTasks actualWorkerCount
+      let situation pre-process remainingTasks newTasks actualWorkerCount upperLimit
       
       ;; give situation to controller
       ask ctrl [
         set-situation situation
       ]
+      set actual_situation situation
     ]
     update-history remainingTasks newTasks actualWorkerCount
   ]
 end
 
-to-report pre-process [remainingTasks newTasks actualWorkerCount]
+to-report pre-process [remainingTasks newTasks actualWorkerCount upperLimit]
   
   let lastDataSet last history
+  
+  ;;let lastRemainingTasks 0
+  ;;foreach history [ [dataSet] ->
+  ;;  set lastRemainingTasks lastRemainingTasks + item 0 dataSet
+  ;;]
+  ;;set lastRemainingTasks lastRemainingTasks / length history
+  
   let lastRemainingTasks item 0 lastDataSet
-  let finishedTasks lastRemainingTasks - remainingTasks + newTasks
+  ;; set lastRemainingTasks lastRemainingTasks + 1 ;; zero problem
+  let finishedTasks remainingTasks - lastRemainingTasks  ;; + newTasks
   
   ;; print word "finishedTasks: " finishedTasks
-  let allTasks newTasks + finishedTasks
+  ;;let allTasks newTasks + finishedTasks
+  let allTasks lastRemainingTasks + remainingTasks
   if allTasks = 0 [set allTasks 1]
-  let taskDiff (newTasks - finishedTasks) / allTasks
-  let workerCountDiff (upper_limit - actualWorkerCount) / upper_limit
+  
+  ;; let taskDiff finishedTasks / allTasks ;; (newTasks - finishedTasks) / allTasks
+  if finishedTasks = -1 [set finishedTasks -2]
+  let taskDiff finishedTasks / (1 + finishedTasks)
+  
+  let workerCountDiff (upperLimit - actualWorkerCount) / upperLimit
   
   let situation (list workerCountDiff taskDiff)
   report situation

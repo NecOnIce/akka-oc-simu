@@ -1,0 +1,157 @@
+breed [collaborationControllers collaborationController]
+collaborationControllers-own [
+  history
+  controlled_actor
+  rule_base
+  actual_situation
+  learning_rate
+  last_remaining_tasks
+]
+
+to-report new-collaboration-controller [controlledActor]
+  
+  let c nobody
+  create-collaborationControllers 1 [
+    set controlled_actor controlledActor
+    set history []
+    set c self
+    hide-turtle
+    set learning_rate 0.1
+    set actual_situation []
+    set last_remaining_tasks 0
+    
+    ;;let cond1 (list 0 0.5)
+    ;;let cond2 (list 0.25 0.75)
+    ;;let cond3 (list 0.5 1.0)
+    
+    ;; gut
+    ;;let cond1 (list 0 0.2)
+    ;;let cond2 (list 0.3 0.7)
+    ;;let cond3 (list 0.8 1.0)
+    
+    let cond1 (list 0 0.3)
+    let cond2 (list 0.3 0.6)
+    let cond3 (list 0.8 1.0)
+    
+    let rule1 (list cond1 -1 0.8 0)
+    let rule2 (list cond2 0 0.5 1)
+    let rule3 (list cond3 1 0.4 2)
+    
+    set rule_base (list rule1 rule2 rule3)
+  ]
+  report c
+end
+
+to collaboration-controller-loop 
+  
+  let ctrls to-list collaborationControllers
+  foreach ctrls [ [c] ->
+    
+    let rule []
+    let ctrlActor nobody
+    ask c [
+      
+      if not empty? actual_situation [
+        
+        if not empty? history [update-rule-base-collaboration]
+        set rule evaluate-rule-collaboration actual_situation
+        set ctrlActor controlled_actor
+        update-controller-history-collaboration rule
+      ]
+      set actual_situation []
+    ]
+    
+    ;; we need observer scope here
+    execute-rule-collaboration rule ctrlActor
+  ]
+end
+
+to update-controller-history-collaboration [rule]
+
+  set history lput rule history ;; maybe we should limit the history to 10 ...
+  
+  if length history > 10 [
+    set history butfirst history
+  ]
+end
+
+to execute-rule-collaboration [rule ctrlActor]
+  
+  if not empty? rule [
+    
+    let action item 1 rule
+    
+    ;; print word "rule " action
+    
+    ;; if action = 0 [] nothing todo
+    if action = 1 [
+      ask ctrlActor [
+        set upper_limit upper_limit + 1
+      ]
+    ]
+    if action = -1 [
+      ask ctrlActor [
+        if upper_limit > 1 [set upper_limit upper_limit - 1]
+      ]
+    ]
+  ]
+end
+
+to update-rule-base-collaboration 
+  
+  let lastRule last history
+  
+  if not empty? lastRule [
+    let actualRemeiningTasks item 3 actual_situation
+    let actualWorkerCount item 4 actual_situation
+    let modifiedActualRemeiningTasks actualRemeiningTasks / actualWorkerCount
+    let remainingTasksDiff last_remaining_tasks - modifiedActualRemeiningTasks
+    let sumRT last_remaining_tasks + modifiedActualRemeiningTasks ;; + actualWorkerCount
+    
+    if sumRT = 0 [stop]
+    
+    let remainingTasksDiffRel remainingTasksDiff / sumRT
+    
+    set remainingTasksDiffRel remainingTasksDiffRel + 1
+    set remainingTasksDiffRel remainingTasksDiffRel / 2
+  
+    let lastRuleEval item 2 lastRule
+  
+    ;; print word "actTaskDiff: " actTaskDiff
+    let newRuleEval lastRuleEval + learning_rate * (remainingTasksDiffRel - lastRuleEval)
+    let lastRuleIndex item 3 lastRule
+    set lastRule replace-item 2 lastRule newRuleEval
+  
+    ;; update rule base
+    set rule_base replace-item lastRuleIndex rule_base lastRule
+    set last_remaining_tasks actualRemeiningTasks
+  ]
+end
+
+to-report evaluate-rule-collaboration [situation]
+  
+  let ranking item 2 situation
+  ;; print word "ranking " ranking
+  
+  let rule []
+  foreach rule_base [ [r] ->
+    
+    let cond item 0 r
+    
+    let rankingL item 0 cond
+    let rankingU item 1 cond
+    
+    if rankingL <= ranking and ranking < rankingU [
+      
+      set rule lput r rule
+    ]
+  ]
+  
+  if not empty? rule [
+    set rule reduce [ [a b] -> 
+      ifelse-value (item 2 a >= item 2 b) [a] [b]
+    ] rule
+  ]
+  
+  report rule
+end

@@ -8,6 +8,7 @@ actors-own [
   resizing ;; the resizing strategy to use
   
   ;; interface 
+  upper_limit
   remaining_tasks ;; the total amount of tasks the actor has currently
   actual_worker_count ;; amount of currently active workers of this actor
   new_tasks ;; the amount of new tasks
@@ -32,6 +33,7 @@ to-report new-actor [pos-x pos-y name]
     set actual_worker_count 0
     set resizing nobody ;; nop impl
     set new_tasks 0
+    set upper_limit 0
   ]
   print "created a new Actor"
   report w
@@ -95,7 +97,9 @@ to actor-loop
     let wList []
     ask ra [
       set wList worker-list
+      let upperLimit upper_limit
       ask resizing [
+        set upper-bound upperLimit
         set wCount (runresult resize-executor wList)
       ]
     ]

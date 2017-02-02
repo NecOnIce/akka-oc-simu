@@ -57,8 +57,18 @@ to default-resize-remove [wList worker-to-remove]
   
   let wAgentSet to-turtleset wList
   let pt pressure-threshold
-  let notBusyWorkersToRemove n-of worker-to-remove wAgentSet with [not is-busy? pt]
-  ask notBusyWorkersToRemove [poisen]
+  let notBusyWorkers wAgentSet with [not is-busy? pt]
+  
+  let notBusyWorkersToRemove []
+  ifelse count notBusyWorkers >= worker-to-remove [
+    set notBusyWorkersToRemove n-of worker-to-remove notBusyWorkers
+    ask notBusyWorkersToRemove [poisen]
+  ][
+    ask notBusyWorkers [poisen]
+    let missing worker-to-remove - count notBusyWorkers
+    let toRemove n-of missing wAgentSet with [is-busy? pt]
+    ask toRemove [poisen]
+  ]
 end
 
 ;; the implementation of the default resizing strategy
@@ -72,10 +82,14 @@ to-report default-resizing [wList]
   
   let workerCount length wList
   ;; print word "WorkerCount: " workerCount
+  let wAgentSet to-turtleset wList
+  let poisenedWorkers count wAgentSet with [is-poisened?]
+  
+  ;; if we have more workers than our upper-bound allows -> downsize
+  if (workerCount - poisenedWorkers) > upper-bound [report -1]
   
   ;; check for increase
   let pt pressure-threshold
-  let wAgentSet to-turtleset wList
   let busyWorkerCount count wAgentSet with [is-busy? pt]
   ;; print word "busyWorkerCount: " busyWorkerCount
   if workerCount = busyWorkerCount [
@@ -104,7 +118,6 @@ to-report default-resizing [wList]
     if newWorkerCount < lower-bound [set newWorkerCount lower-bound]
     
     let newWorkers (newWorkerCount - workerCount)
-    let poisenedWorkers count wAgentSet with [is-poisened?]
     
     ;; take care of poisened workers, they haven't to be considered for removal
     set newWorkers newWorkers + poisenedWorkers

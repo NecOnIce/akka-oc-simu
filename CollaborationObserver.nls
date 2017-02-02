@@ -1,0 +1,86 @@
+breed [collaborationObservers collaborationObserver]
+collaborationObservers-own [
+  history
+  observed_actor
+  
+  ctrl
+  underlying_observer
+  neighbour_observers
+]
+
+to new-collaboration-observer [underlyingObserver neighbourObservers]
+  
+  let a nobody
+  ask underlyingObserver [
+    set a observed_actor
+  ]
+  let collaborationCtrl new-collaboration-controller a
+  
+  create-collaborationObservers 1 [
+    set underlying_observer underlyingObserver
+    set neighbour_observers neighbourObservers
+    hide-turtle
+    set observed_actor a
+    set ctrl collaborationCtrl
+  ]
+end
+
+to collaboration-observer-loop
+  
+  ask collaborationObservers [
+    
+    ;; get data
+    let upperLimit 0
+    ask observed_actor [
+      set upperLimit upper_limit
+    ]
+  
+    let situation []
+    ask underlying_observer [
+      set situation actual_situation
+    ]
+    
+    if empty? situation [stop]
+    
+    let myRemainingTasks 0
+    let actualWorkerCount 0
+    ask observed_actor [
+      set myRemainingTasks remaining_tasks
+      set actualWorkerCount actual_worker_count
+    ]
+    
+    let smoothedRemainingTasks myRemainingTasks / actualWorkerCount
+    let myRemainingTasksSig smoothedRemainingTasks / (1 + smoothedRemainingTasks)
+    
+    let id 1
+    
+    set neighbour_observers to-list n-of 2 other observers
+    let allRemainingTasks myRemainingTasks
+    foreach neighbour_observers [ [obs] ->
+      
+     let otherRemainingTasks 0
+     ask obs [
+       ask observed_actor [
+         set otherRemainingTasks remaining_tasks
+       ]
+     ]
+     
+     set allRemainingTasks allRemainingTasks + otherRemainingTasks
+     ;; if otherRemainingTasks > myRemainingTasks [set id id + 1]
+    ]
+    
+    if allRemainingTasks = 0 [set allRemainingTasks 1] ;; prevent devision by zero
+    
+    ;;let oCount 1 + length neighbour_observers
+    ;;let ranking id / oCount
+    let ranking ((myRemainingTasks / allRemainingTasks) + myRemainingTasksSig) / 2
+    
+    ;; send to controller
+    let updatedSituation lput ranking situation 
+    set updatedSituation lput myRemainingTasks updatedSituation
+    set updatedSituation lput actualWorkerCount updatedSituation
+    ask ctrl [
+      set actual_situation updatedSituation
+    ]
+  ]  
+end

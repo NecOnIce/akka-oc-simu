@@ -20,8 +20,8 @@ to-report initialize-fixed-actor [act]
     ]
     set actual_worker_count length wList
     set a self
+    set upper_limit 10
   ]
-  new-observer a
   
   report act
 end
